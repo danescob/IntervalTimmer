@@ -20,8 +20,9 @@ A lightweight browser-based interval timer with configurable work/rest cycles, c
 ## 🧩 Files
 
 - `index.html` - UI structure
-- `styles.css` - styling for the timer and UI
-- `script.js` - timer logic, state management, audio synthesis
+- `assets/styles.css` - styling for the timer and UI
+- `assets/script.js` - timer logic, state management, local audio playback
+- `assets/sounds/` - `.ogg` timer cues
 
 ## ▶️ Running locally
 
@@ -43,8 +44,21 @@ A lightweight browser-based interval timer with configurable work/rest cycles, c
 
 ## 📝 Notes
 
-- Audio uses the Web Audio API and may require a user interaction before sound will work.
+- Audio uses local `.ogg` files and may require a user interaction before sound will work.
 - Wake Lock is browser-dependent and may not be available everywhere.
+
+## 🔊 Audio assets
+
+- Timer cues use boxing-themed `CC0` sounds from BigSoundBank.
+- Start: Boxing bell #1
+- Warning: Punch #7
+- Rest: Punch #6
+- Transition: Punch #6
+- Finish: Boxing bell #2
+- Source: https://bigsoundbank.com/boxing-bell-1-s1926.html
+- Source: https://bigsoundbank.com/boxing-bell-2-s1927.html
+- Source: https://bigsoundbank.com/punch-6-s2461.html
+- Source: https://bigsoundbank.com/punch-7-s2462.html
 
 ## 🧪 Basic technical flow
 

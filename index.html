@@ -57,27 +57,72 @@
       <form id="settingsForm" class="settings-form">
         <label>
           <span>Time to start</span>
-          <input id="startDelay" name="startDelay" type="text" inputmode="numeric" value="0:15" placeholder="M:SS">
+          <div class="field-row">
+            <input id="startDelay" name="startDelay" type="text" inputmode="numeric" value="0:15" placeholder="M:SS">
+            <select id="startDelaySound" name="startDelaySound" aria-label="Sound for time to start">
+              <option value="transition">Punch #6</option>
+              <option value="start">Boxing bell #1</option>
+              <option value="warning">Punch #7</option>
+              <option value="rest">Punch #6 soft</option>
+              <option value="finish">Boxing bell #2</option>
+            </select>
+          </div>
         </label>
 
         <label>
           <span>Time interval</span>
-          <input id="intervalTime" name="intervalTime" type="text" inputmode="numeric" value="10:00" placeholder="M:SS">
+          <div class="field-row">
+            <input id="intervalTime" name="intervalTime" type="text" inputmode="numeric" value="10:00" placeholder="M:SS">
+            <select id="intervalTimeSound" name="intervalTimeSound" aria-label="Sound for time interval">
+              <option value="start">Boxing bell #1</option>
+              <option value="transition">Punch #6</option>
+              <option value="warning">Punch #7</option>
+              <option value="rest">Punch #6 soft</option>
+              <option value="finish">Boxing bell #2</option>
+            </select>
+          </div>
         </label>
 
         <label>
           <span>Time to announce end of interval</span>
-          <input id="intervalWarning" name="intervalWarning" type="text" inputmode="numeric" value="2:00" placeholder="M:SS">
+          <div class="field-row">
+            <input id="intervalWarning" name="intervalWarning" type="text" inputmode="numeric" value="2:00" placeholder="M:SS">
+            <select id="intervalWarningSound" name="intervalWarningSound" aria-label="Sound for interval warning">
+              <option value="warning">Punch #7</option>
+              <option value="start">Boxing bell #1</option>
+              <option value="transition">Punch #6</option>
+              <option value="rest">Punch #6 soft</option>
+              <option value="finish">Boxing bell #2</option>
+            </select>
+          </div>
         </label>
 
         <label>
           <span>Time to rest</span>
-          <input id="restTime" name="restTime" type="text" inputmode="numeric" value="0:00" placeholder="M:SS">
+          <div class="field-row">
+            <input id="restTime" name="restTime" type="text" inputmode="numeric" value="0:00" placeholder="M:SS">
+            <select id="restTimeSound" name="restTimeSound" aria-label="Sound for rest time">
+              <option value="rest">Punch #6 soft</option>
+              <option value="start">Boxing bell #1</option>
+              <option value="transition">Punch #6</option>
+              <option value="warning">Punch #7</option>
+              <option value="finish">Boxing bell #2</option>
+            </select>
+          </div>
         </label>
 
         <label>
           <span>Time to announce end of rest</span>
-          <input id="restWarning" name="restWarning" type="text" inputmode="numeric" value="0:00" placeholder="M:SS">
+          <div class="field-row">
+            <input id="restWarning" name="restWarning" type="text" inputmode="numeric" value="0:00" placeholder="M:SS">
+            <select id="restWarningSound" name="restWarningSound" aria-label="Sound for rest warning">
+              <option value="warning">Punch #7</option>
+              <option value="start">Boxing bell #1</option>
+              <option value="transition">Punch #6</option>
+              <option value="rest">Punch #6 soft</option>
+              <option value="finish">Boxing bell #2</option>
+            </select>
+          </div>
         </label>
 
         <label>

@@ -1,4 +1,25 @@
 const STORAGE_KEY = "interval-timer-settings";
+const SOUND_FILES = {
+  start: "assets/sounds/start.ogg",
+  warning: "assets/sounds/warning.ogg",
+  rest: "assets/sounds/rest.ogg",
+  transition: "assets/sounds/transition.ogg",
+  finish: "assets/sounds/finish.ogg",
+};
+const SOUND_VOLUMES = {
+  start: 0.8,
+  warning: 0.95,
+  rest: 0.55,
+  transition: 0.65,
+  finish: 0.85,
+};
+const DEFAULT_SOUND_SETTINGS = {
+  startDelaySound: "transition",
+  intervalTimeSound: "start",
+  intervalWarningSound: "warning",
+  restTimeSound: "rest",
+  restWarningSound: "warning",
+};
 
 const defaultSettings = {
   startDelay: "0:15",
@@ -7,15 +28,21 @@ const defaultSettings = {
   restTime: "0:00",
   restWarning: "0:00",
   intervalCount: 6,
+  ...DEFAULT_SOUND_SETTINGS,
 };
 
 const elements = {
   form: document.getElementById("settingsForm"),
   startDelay: document.getElementById("startDelay"),
+  startDelaySound: document.getElementById("startDelaySound"),
   intervalTime: document.getElementById("intervalTime"),
+  intervalTimeSound: document.getElementById("intervalTimeSound"),
   intervalWarning: document.getElementById("intervalWarning"),
+  intervalWarningSound: document.getElementById("intervalWarningSound"),
   restTime: document.getElementById("restTime"),
+  restTimeSound: document.getElementById("restTimeSound"),
   restWarning: document.getElementById("restWarning"),
+  restWarningSound: document.getElementById("restWarningSound"),
   intervalCount: document.getElementById("intervalCount"),
   timerDisplay: document.getElementById("timerDisplay"),
   phaseLabel: document.getElementById("phaseLabel"),
@@ -35,7 +62,7 @@ const state = {
   isRunning: false,
   phases: [],
   currentInterval: 0,
-  audioContext: null,
+  soundBank: {},
   warned: false,
   wakeLock: null,
 };
@@ -61,10 +88,15 @@ function formatTime(totalSeconds) {
 function readSettingsFromForm() {
   const nextSettings = {
     startDelay: elements.startDelay.value,
+    startDelaySound: elements.startDelaySound.value,
     intervalTime: elements.intervalTime.value,
+    intervalTimeSound: elements.intervalTimeSound.value,
     intervalWarning: elements.intervalWarning.value,
+    intervalWarningSound: elements.intervalWarningSound.value,
     restTime: elements.restTime.value,
+    restTimeSound: elements.restTimeSound.value,
     restWarning: elements.restWarning.value,
+    restWarningSound: elements.restWarningSound.value,
     intervalCount: Number(elements.intervalCount.value),
   };
 
@@ -97,10 +129,15 @@ function readSettingsFromForm() {
 
 function applySettingsToForm(settings) {
   elements.startDelay.value = settings.startDelay;
+  elements.startDelaySound.value = settings.startDelaySound;
   elements.intervalTime.value = settings.intervalTime;
+  elements.intervalTimeSound.value = settings.intervalTimeSound;
   elements.intervalWarning.value = settings.intervalWarning;
+  elements.intervalWarningSound.value = settings.intervalWarningSound;
   elements.restTime.value = settings.restTime;
+  elements.restTimeSound.value = settings.restTimeSound;
   elements.restWarning.value = settings.restWarning;
+  elements.restWarningSound.value = settings.restWarningSound;
   elements.intervalCount.value = settings.intervalCount;
 }
 
@@ -130,10 +167,15 @@ function saveSettings() {
   const next = readSettingsFromForm();
   state.settings = {
     startDelay: next.startDelay,
+    startDelaySound: next.startDelaySound,
     intervalTime: next.intervalTime,
+    intervalTimeSound: next.intervalTimeSound,
     intervalWarning: next.intervalWarning,
+    intervalWarningSound: next.intervalWarningSound,
     restTime: next.restTime,
+    restTimeSound: next.restTimeSound,
     restWarning: next.restWarning,
+    restWarningSound: next.restWarningSound,
     intervalCount: next.intervalCount,
   };
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state.settings));
@@ -154,6 +196,7 @@ function buildPhases(settings) {
       duration: startDelay,
       intervalNumber: 0,
       warningAt: null,
+      sound: settings.startDelaySound,
     });
   }
 
@@ -164,6 +207,8 @@ function buildPhases(settings) {
       duration: intervalTime,
       intervalNumber: i,
       warningAt: parseTime(settings.intervalWarning),
+      sound: settings.intervalTimeSound,
+      warningSound: settings.intervalWarningSound,
     });
 
     if (restTime > 0 && i < settings.intervalCount) {
@@ -173,6 +218,8 @@ function buildPhases(settings) {
         duration: restTime,
         intervalNumber: i,
         warningAt: parseTime(settings.restWarning),
+        sound: settings.restTimeSound,
+        warningSound: settings.restWarningSound,
       });
     }
   }
@@ -180,74 +227,30 @@ function buildPhases(settings) {
   return phases;
 }
 
-function ensureAudioContext() {
-  if (!state.audioContext) {
-    state.audioContext = new window.AudioContext();
-  }
+function ensureSoundBank() {
+  Object.entries(SOUND_FILES).forEach(([pattern, source]) => {
+    if (state.soundBank[pattern]) {
+      return;
+    }
 
-  if (state.audioContext.state === "suspended") {
-    state.audioContext.resume();
-  }
-}
-
-function playTone({ frequency, startTime, duration, volume, type = "sine", decay = duration }) {
-  const oscillator = state.audioContext.createOscillator();
-  const gain = state.audioContext.createGain();
-
-  oscillator.type = type;
-  oscillator.frequency.setValueAtTime(frequency, startTime);
-
-  gain.gain.setValueAtTime(0.0001, startTime);
-  gain.gain.exponentialRampToValueAtTime(volume, startTime + 0.01);
-  gain.gain.exponentialRampToValueAtTime(0.0001, startTime + decay);
-
-  oscillator.connect(gain);
-  gain.connect(state.audioContext.destination);
-  oscillator.start(startTime);
-  oscillator.stop(startTime + duration);
+    const audio = new Audio(source);
+    audio.preload = "auto";
+    state.soundBank[pattern] = audio;
+  });
 }
 
 function playSound(pattern = "transition") {
-  ensureAudioContext();
-  const now = state.audioContext.currentTime;
+  const baseAudio = state.soundBank[pattern];
 
-  if (pattern === "start") {
-    // Strong two-hit ring for the round start.
-    playTone({ frequency: 880, startTime: now, duration: 1.9, volume: 0.16, decay: 1.2 });
-    playTone({ frequency: 1320, startTime: now + 0.01, duration: 1.6, volume: 0.09, decay: 1.05, type: "triangle" });
-    playTone({ frequency: 660, startTime: now + 0.015, duration: 2.1, volume: 0.06, decay: 1.35 });
-    playTone({ frequency: 880, startTime: now + 0.34, duration: 1.6, volume: 0.14, decay: 1.0 });
-    playTone({ frequency: 1320, startTime: now + 0.35, duration: 1.3, volume: 0.07, decay: 0.95, type: "triangle" });
+  if (!baseAudio) {
     return;
   }
 
-  if (pattern === "warning") {
-    [0, 0.22, 0.44].forEach((offset) => {
-      playTone({ frequency: 1040, startTime: now + offset, duration: 0.42, volume: 0.12, decay: 0.28, type: "triangle" });
-      playTone({ frequency: 780, startTime: now + offset + 0.015, duration: 0.46, volume: 0.08, decay: 0.3 });
-    });
-    return;
-  }
-
-  if (pattern === "rest") {
-    playTone({ frequency: 720, startTime: now, duration: 1.3, volume: 0.12, decay: 0.75 });
-    playTone({ frequency: 1080, startTime: now + 0.02, duration: 1.0, volume: 0.06, decay: 0.68, type: "triangle" });
-    return;
-  }
-
-  if (pattern === "transition") {
-    playTone({ frequency: 820, startTime: now, duration: 1.0, volume: 0.11, decay: 0.58 });
-    playTone({ frequency: 1230, startTime: now + 0.015, duration: 0.82, volume: 0.05, decay: 0.52, type: "triangle" });
-    return;
-  }
-
-  if (pattern === "finish") {
-    [0, 0.34, 0.68].forEach((offset) => {
-      playTone({ frequency: 900, startTime: now + offset, duration: 0.88, volume: 0.12, decay: 0.6, type: "triangle" });
-      playTone({ frequency: 1350, startTime: now + offset + 0.02, duration: 0.7, volume: 0.06, decay: 0.48 });
-    });
-    return;
-  }
+  const audio = baseAudio.cloneNode();
+  audio.volume = SOUND_VOLUMES[pattern] ?? 0.65;
+  audio.play().catch(() => {
+    // Browsers may still block audio until the page has been interacted with.
+  });
 }
 
 function showMessage(text) {
@@ -342,13 +345,7 @@ function advancePhase() {
 
   const nextPhase = state.phases[state.phaseIndex];
   state.phaseRemaining = nextPhase.duration;
-  if (nextPhase.type === "interval") {
-    playSound("start");
-  } else if (nextPhase.type === "rest") {
-    playSound("rest");
-  } else {
-    playSound("transition");
-  }
+  playSound(nextPhase.sound ?? "transition");
   updateDisplay();
 }
 
@@ -372,7 +369,7 @@ function tick() {
     state.phaseRemaining <= phase.warningAt
   ) {
     state.warned = true;
-    playSound("warning");
+    playSound(phase.warningSound ?? "warning");
     showMessage(`${phase.label} ending in ${formatTime(phase.warningAt)}.`);
   }
 
@@ -388,10 +385,15 @@ function startTimer() {
     const next = readSettingsFromForm();
     state.settings = {
       startDelay: next.startDelay,
+      startDelaySound: next.startDelaySound,
       intervalTime: next.intervalTime,
+      intervalTimeSound: next.intervalTimeSound,
       intervalWarning: next.intervalWarning,
+      intervalWarningSound: next.intervalWarningSound,
       restTime: next.restTime,
+      restTimeSound: next.restTimeSound,
       restWarning: next.restWarning,
+      restWarningSound: next.restWarningSound,
       intervalCount: next.intervalCount,
     };
   } catch (error) {
@@ -399,7 +401,7 @@ function startTimer() {
     return;
   }
 
-  ensureAudioContext();
+  ensureSoundBank();
 
   if (!state.phases.length || state.phaseIndex >= state.phases.length) {
     state.phases = buildPhases(state.settings);
@@ -407,13 +409,7 @@ function startTimer() {
     state.warned = false;
     state.phaseRemaining = state.phases[0]?.duration ?? 0;
     updateDisplay();
-    if (state.phases[0]?.type === "interval") {
-      playSound("start");
-    } else if (state.phases[0]?.type === "rest") {
-      playSound("rest");
-    } else {
-      playSound("transition");
-    }
+    playSound(state.phases[0]?.sound ?? "transition");
   }
 
   if (state.isRunning) {
