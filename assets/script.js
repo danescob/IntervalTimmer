@@ -55,6 +55,11 @@ const elements = {
   restWarning: document.getElementById("restWarning"),
   restWarningSound: document.getElementById("restWarningSound"),
   intervalCount: document.getElementById("intervalCount"),
+  timerCard: document.querySelector(".timer-card"),
+  controlsOverlay: document.querySelector(".controls-overlay"),
+  mobileMenuButton: document.getElementById("mobileMenuButton"),
+  mobileCloseButton: document.getElementById("mobileCloseButton"),
+  settingsPanel: document.getElementById("settingsPanel"),
   timerDisplay: document.getElementById("timerDisplay"),
   phaseLabel: document.getElementById("phaseLabel"),
   intervalLabel: document.getElementById("intervalLabel"),
@@ -71,10 +76,12 @@ const state = {
   phaseIndex: 0,
   phaseRemainingTenths: 0,
   isRunning: false,
+  isPaused: false,
   phases: [],
   soundBank: {},
   warned: false,
   wakeLock: null,
+  controlsOverlayTimeoutId: null,
 };
 
 function toTenths(seconds) {
@@ -311,6 +318,37 @@ function showMessage(text) {
   elements.message.textContent = text;
 }
 
+function closeMobileMenu() {
+  document.body.classList.remove("settings-open");
+  document.body.classList.add("settings-closed");
+  elements.mobileMenuButton.setAttribute("aria-expanded", "false");
+}
+
+function toggleMobileMenu() {
+  document.body.classList.remove("settings-closed");
+  const isOpen = document.body.classList.toggle("settings-open");
+  elements.mobileMenuButton.setAttribute("aria-expanded", String(isOpen));
+}
+
+function showControlsOverlayTemporarily() {
+  window.clearTimeout(state.controlsOverlayTimeoutId);
+  elements.controlsOverlay.classList.add("controls-overlay-visible");
+  state.controlsOverlayTimeoutId = window.setTimeout(() => {
+    elements.controlsOverlay.classList.remove("controls-overlay-visible");
+    state.controlsOverlayTimeoutId = null;
+  }, 5000);
+}
+
+function updateControlVisibility() {
+  const showStart = !state.isRunning;
+  const showPause = state.isRunning;
+  const showStop = state.isRunning || state.isPaused;
+
+  elements.startButton.classList.toggle("action-hidden", !showStart);
+  elements.pauseButton.classList.toggle("action-hidden", !showPause);
+  elements.stopButton.classList.toggle("action-hidden", !showStop);
+}
+
 async function requestWakeLock() {
   if (!("wakeLock" in navigator) || state.wakeLock || !state.isRunning) {
     return;
@@ -359,6 +397,7 @@ function resetVisualState() {
   elements.phaseLabel.textContent = "Ready";
   elements.intervalLabel.textContent = `Interval 0 / ${state.settings.intervalCount}`;
   document.body.classList.remove("phase-warning", "phase-rest", "phase-finished");
+  updateControlVisibility();
 }
 
 function updateDisplay() {
@@ -484,9 +523,11 @@ function startTimer() {
   }
 
   state.isRunning = true;
+  state.isPaused = false;
   state.timerId = window.setInterval(tick, 100);
   requestWakeLock();
   showMessage("Timer running.");
+  updateControlVisibility();
 }
 
 function pauseTimer() {
@@ -495,14 +536,17 @@ function pauseTimer() {
   }
 
   state.isRunning = false;
+  state.isPaused = true;
   window.clearInterval(state.timerId);
   state.timerId = null;
   releaseWakeLock();
   showMessage("Timer paused.");
+  updateControlVisibility();
 }
 
 function stopTimer(resetMessage = true) {
   state.isRunning = false;
+  state.isPaused = false;
   window.clearInterval(state.timerId);
   state.timerId = null;
   state.phaseIndex = 0;
@@ -542,6 +586,17 @@ elements.intervalMetronomeEnabled.addEventListener("change", () => {
 
 elements.intervalMetronomeSound.addEventListener("change", () => {
   applyLiveMetronomeSettings();
+});
+
+elements.timerCard.addEventListener("mouseenter", showControlsOverlayTemporarily);
+elements.timerCard.addEventListener("mousemove", showControlsOverlayTemporarily);
+elements.mobileMenuButton.addEventListener("click", toggleMobileMenu);
+elements.mobileCloseButton.addEventListener("click", closeMobileMenu);
+
+window.addEventListener("resize", () => {
+  if (window.innerWidth > 960) {
+    document.body.classList.remove("settings-open");
+  }
 });
 
 document.addEventListener("visibilitychange", () => {

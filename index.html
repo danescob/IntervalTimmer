@@ -20,38 +20,44 @@
   <main class="layout">
     <section class="timer-panel">
       <div class="status-wrap">
-        <p class="eyebrow">Interval Timer</p>
-        <h1 id="phaseLabel">Ready</h1>
-        <p id="intervalLabel">Interval 0 / 6</p>
+        <button id="mobileMenuButton" class="mobile-menu-button" type="button" aria-controls="settingsPanel" aria-expanded="false">
+          <i class="fa-solid fa-sliders"></i>
+        </button>
       </div>
 
       <div class="timer-card">
-        <div id="timerDisplay" class="timer-display">10:00</div>
-      </div>
-
-      <div class="controls">
-        <button id="startButton" class="action action-primary" type="button">
-          <i class="fa-solid fa-play"></i>
-          <span>Start</span>
-        </button>
-        <button id="pauseButton" class="action" type="button">
-          <i class="fa-solid fa-pause"></i>
-          <span>Pause</span>
-        </button>
-        <button id="stopButton" class="action" type="button">
-          <i class="fa-solid fa-stop"></i>
-          <span>Stop</span>
-        </button>
+        <div class="timer-face">
+          <p class="eyebrow">Interval Timer</p>
+          <h1 id="phaseLabel">Ready</h1>
+          <div id="timerDisplay" class="timer-display">10:00</div>
+          <p id="intervalLabel">Interval 0 / 6</p>
+        </div>
+        <div class="controls controls-overlay">
+          <button id="startButton" class="action action-primary" type="button">
+            <i class="fa-solid fa-play"></i>
+          </button>
+          <button id="pauseButton" class="action" type="button">
+            <i class="fa-solid fa-pause"></i>
+          </button>
+          <button id="stopButton" class="action" type="button">
+            <i class="fa-solid fa-stop"></i>
+          </button>
+        </div>
       </div>
     </section>
 
-    <aside class="settings-panel">
+    <aside id="settingsPanel" class="settings-panel">
       <div class="settings-header">
         <h2>Options</h2>
-        <button id="saveButton" class="save-button" type="button">
-          <i class="fa-solid fa-floppy-disk"></i>
-          <span>Save</span>
-        </button>
+        <div class="settings-actions">
+          <button id="saveButton" class="save-button" type="button">
+            <i class="fa-solid fa-floppy-disk"></i>
+            <span>Save</span>
+          </button>
+          <button id="mobileCloseButton" class="mobile-close-button" type="button" aria-label="Close options">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        </div>
       </div>
 
       <form id="settingsForm" class="settings-form">
