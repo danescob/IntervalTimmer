@@ -15,3 +15,9 @@ Audio sources for the timer cues:
 - `finish.ogg`: Boxing bell #2
   - https://bigsoundbank.com/boxing-bell-2-s1927.html
   - CC0 / public domain equivalent
+- `metronome_mechanical.ogg`: Thermostat 1
+  - https://bigsoundbank.com/thermostat-1-s2191.html
+  - CC0 / public domain equivalent
+- `metronome_electric.ogg`: Raspberry mouse, single click
+  - https://bigsoundbank.com/raspberry-mouse-single-click-s1735.html
+  - CC0 / public domain equivalent

@@ -5,6 +5,8 @@ const SOUND_FILES = {
   rest: "assets/sounds/rest.ogg",
   transition: "assets/sounds/transition.ogg",
   finish: "assets/sounds/finish.ogg",
+  metronome_electric: "assets/sounds/metronome_electric.ogg",
+  metronome_mechanical: "assets/sounds/metronome_mechanical.ogg",
 };
 const SOUND_VOLUMES = {
   start: 0.8,
@@ -12,13 +14,15 @@ const SOUND_VOLUMES = {
   rest: 0.55,
   transition: 0.65,
   finish: 0.85,
+  metronome_electric: 0.7,
+  metronome_mechanical: 0.6,
 };
 const DEFAULT_SOUND_SETTINGS = {
   startDelaySound: "transition",
   intervalTimeSound: "start",
   intervalMetronomeEnabled: false,
   intervalMetronomeTime: 10,
-  intervalMetronomeSound: "transition",
+  intervalMetronomeSound: "metronome_electric",
   intervalWarningSound: "warning",
   restTimeSound: "rest",
   restWarningSound: "warning",
