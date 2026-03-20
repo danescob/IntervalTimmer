@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Interval Timer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;600;700&display=swap" rel="stylesheet">
+  <link
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css"
+    integrity="sha512-Evv84Mr4kqVGRNSgIGL/F/aIDqQb7xQ2vcrdIwxfjThSH8CSR7PBEakCr51Ck+w+/U6swU2Im1vVX0SVk9ABhg=="
+    crossorigin="anonymous"
+    referrerpolicy="no-referrer"
+  >
+  <link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+  <main class="layout">
+    <section class="timer-panel">
+      <div class="status-wrap">
+        <p class="eyebrow">Interval Timer</p>
+        <h1 id="phaseLabel">Ready</h1>
+        <p id="intervalLabel">Interval 0 / 6</p>
+      </div>
+
+      <div class="timer-card">
+        <div id="timerDisplay" class="timer-display">10:00</div>
+      </div>
+
+      <div class="controls">
+        <button id="startButton" class="action action-primary" type="button">
+          <i class="fa-solid fa-play"></i>
+          <span>Start</span>
+        </button>
+        <button id="pauseButton" class="action" type="button">
+          <i class="fa-solid fa-pause"></i>
+          <span>Pause</span>
+        </button>
+        <button id="stopButton" class="action" type="button">
+          <i class="fa-solid fa-stop"></i>
+          <span>Stop</span>
+        </button>
+      </div>
+    </section>
+
+    <aside class="settings-panel">
+      <div class="settings-header">
+        <h2>Options</h2>
+        <button id="saveButton" class="save-button" type="button">
+          <i class="fa-solid fa-floppy-disk"></i>
+          <span>Save</span>
+        </button>
+      </div>
+
+      <form id="settingsForm" class="settings-form">
+        <label>
+          <span>Time to start</span>
+          <input id="startDelay" name="startDelay" type="text" inputmode="numeric" value="0:15" placeholder="M:SS">
+        </label>
+
+        <label>
+          <span>Time interval</span>
+          <input id="intervalTime" name="intervalTime" type="text" inputmode="numeric" value="10:00" placeholder="M:SS">
+        </label>
+
+        <label>
+          <span>Time to announce end of interval</span>
+          <input id="intervalWarning" name="intervalWarning" type="text" inputmode="numeric" value="2:00" placeholder="M:SS">
+        </label>
+
+        <label>
+          <span>Time to rest</span>
+          <input id="restTime" name="restTime" type="text" inputmode="numeric" value="0:00" placeholder="M:SS">
+        </label>
+
+        <label>
+          <span>Time to announce end of rest</span>
+          <input id="restWarning" name="restWarning" type="text" inputmode="numeric" value="0:00" placeholder="M:SS">
+        </label>
+
+        <label>
+          <span>Quantity of intervals</span>
+          <input id="intervalCount" name="intervalCount" type="number" min="1" step="1" value="6">
+        </label>
+      </form>
+
+      <p id="message" class="message" aria-live="polite"></p>
+    </aside>
+  </main>
+
+  <script src="assets/script.js"></script>
+</body>
+</html>
