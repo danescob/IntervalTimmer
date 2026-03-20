@@ -129,6 +129,27 @@
           <span>Quantity of intervals</span>
           <input id="intervalCount" name="intervalCount" type="number" min="1" step="1" value="6">
         </label>
+
+        <label class="metronome-group">
+          <span>Interval metronome</span>
+          <div class="field-row field-row-metronome-slider">
+            <input id="intervalMetronomeSlider" name="intervalMetronomeSlider" type="range" min="1" max="100" step="1" value="10" aria-label="Metronome interval slider in tenths of seconds">
+          </div>
+          <div class="field-row field-row-metronome-controls">
+            <label class="switch" for="intervalMetronomeEnabled" aria-label="Enable interval metronome">
+              <input id="intervalMetronomeEnabled" name="intervalMetronomeEnabled" type="checkbox">
+              <span class="switch-track"></span>
+            </label>
+            <input id="intervalMetronomeTime" name="intervalMetronomeTime" type="number" min="1" max="100" step="1" value="10" aria-label="Metronome interval in tenths of seconds">
+            <select id="intervalMetronomeSound" name="intervalMetronomeSound" aria-label="Metronome sound for interval time">
+              <option value="transition">Punch #6</option>
+              <option value="warning">Punch #7</option>
+              <option value="start">Boxing bell #1</option>
+              <option value="rest">Punch #6 soft</option>
+              <option value="finish">Boxing bell #2</option>
+            </select>
+          </div>
+        </label>
       </form>
 
       <p id="message" class="message" aria-live="polite"></p>

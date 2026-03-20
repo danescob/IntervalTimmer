@@ -16,6 +16,9 @@ const SOUND_VOLUMES = {
 const DEFAULT_SOUND_SETTINGS = {
   startDelaySound: "transition",
   intervalTimeSound: "start",
+  intervalMetronomeEnabled: false,
+  intervalMetronomeTime: 10,
+  intervalMetronomeSound: "transition",
   intervalWarningSound: "warning",
   restTimeSound: "rest",
   restWarningSound: "warning",
@@ -37,6 +40,10 @@ const elements = {
   startDelaySound: document.getElementById("startDelaySound"),
   intervalTime: document.getElementById("intervalTime"),
   intervalTimeSound: document.getElementById("intervalTimeSound"),
+  intervalMetronomeEnabled: document.getElementById("intervalMetronomeEnabled"),
+  intervalMetronomeSlider: document.getElementById("intervalMetronomeSlider"),
+  intervalMetronomeTime: document.getElementById("intervalMetronomeTime"),
+  intervalMetronomeSound: document.getElementById("intervalMetronomeSound"),
   intervalWarning: document.getElementById("intervalWarning"),
   intervalWarningSound: document.getElementById("intervalWarningSound"),
   restTime: document.getElementById("restTime"),
@@ -58,14 +65,17 @@ const state = {
   settings: { ...defaultSettings },
   timerId: null,
   phaseIndex: 0,
-  phaseRemaining: 0,
+  phaseRemainingTenths: 0,
   isRunning: false,
   phases: [],
-  currentInterval: 0,
   soundBank: {},
   warned: false,
   wakeLock: null,
 };
+
+function toTenths(seconds) {
+  return seconds * 10;
+}
 
 function parseTime(value) {
   const trimmed = String(value).trim();
@@ -85,12 +95,39 @@ function formatTime(totalSeconds) {
   return `${minutes}:${String(seconds).padStart(2, "0")}`;
 }
 
+function syncMetronomeTimeInputs(value) {
+  const normalized = Math.min(100, Math.max(1, Number(value) || DEFAULT_SOUND_SETTINGS.intervalMetronomeTime));
+  elements.intervalMetronomeSlider.value = String(normalized);
+  elements.intervalMetronomeTime.value = String(normalized);
+}
+
+function applyLiveMetronomeSettings() {
+  syncMetronomeTimeInputs(elements.intervalMetronomeTime.value);
+
+  state.settings.intervalMetronomeEnabled = elements.intervalMetronomeEnabled.checked;
+  state.settings.intervalMetronomeTime = Number(elements.intervalMetronomeTime.value);
+  state.settings.intervalMetronomeSound = elements.intervalMetronomeSound.value;
+
+  state.phases.forEach((phase) => {
+    if (phase.type !== "interval") {
+      return;
+    }
+
+    phase.metronomeEnabled = state.settings.intervalMetronomeEnabled;
+    phase.metronomeTime = state.settings.intervalMetronomeTime;
+    phase.metronomeSound = state.settings.intervalMetronomeSound;
+  });
+}
+
 function readSettingsFromForm() {
   const nextSettings = {
     startDelay: elements.startDelay.value,
     startDelaySound: elements.startDelaySound.value,
     intervalTime: elements.intervalTime.value,
     intervalTimeSound: elements.intervalTimeSound.value,
+    intervalMetronomeEnabled: elements.intervalMetronomeEnabled.checked,
+    intervalMetronomeTime: Number(elements.intervalMetronomeTime.value),
+    intervalMetronomeSound: elements.intervalMetronomeSound.value,
     intervalWarning: elements.intervalWarning.value,
     intervalWarningSound: elements.intervalWarningSound.value,
     restTime: elements.restTime.value,
@@ -116,6 +153,10 @@ function readSettingsFromForm() {
     throw new Error("Quantity of intervals must be at least 1.");
   }
 
+  if (!Number.isInteger(nextSettings.intervalMetronomeTime) || nextSettings.intervalMetronomeTime < 1 || nextSettings.intervalMetronomeTime > 100) {
+    throw new Error("Metronome interval must be between 1 and 100 tenths of a second.");
+  }
+
   if (parsed.intervalWarning > parsed.intervalTime) {
     throw new Error("End of interval warning cannot be longer than the interval.");
   }
@@ -132,6 +173,9 @@ function applySettingsToForm(settings) {
   elements.startDelaySound.value = settings.startDelaySound;
   elements.intervalTime.value = settings.intervalTime;
   elements.intervalTimeSound.value = settings.intervalTimeSound;
+  elements.intervalMetronomeEnabled.checked = Boolean(settings.intervalMetronomeEnabled);
+  syncMetronomeTimeInputs(settings.intervalMetronomeTime);
+  elements.intervalMetronomeSound.value = settings.intervalMetronomeSound;
   elements.intervalWarning.value = settings.intervalWarning;
   elements.intervalWarningSound.value = settings.intervalWarningSound;
   elements.restTime.value = settings.restTime;
@@ -170,6 +214,9 @@ function saveSettings() {
     startDelaySound: next.startDelaySound,
     intervalTime: next.intervalTime,
     intervalTimeSound: next.intervalTimeSound,
+    intervalMetronomeEnabled: next.intervalMetronomeEnabled,
+    intervalMetronomeTime: next.intervalMetronomeTime,
+    intervalMetronomeSound: next.intervalMetronomeSound,
     intervalWarning: next.intervalWarning,
     intervalWarningSound: next.intervalWarningSound,
     restTime: next.restTime,
@@ -193,9 +240,9 @@ function buildPhases(settings) {
     phases.push({
       type: "start",
       label: "Starting Soon",
-      duration: startDelay,
+      durationTenths: toTenths(startDelay),
       intervalNumber: 0,
-      warningAt: null,
+      warningAtTenths: null,
       sound: settings.startDelaySound,
     });
   }
@@ -204,10 +251,13 @@ function buildPhases(settings) {
     phases.push({
       type: "interval",
       label: "Work",
-      duration: intervalTime,
+      durationTenths: toTenths(intervalTime),
       intervalNumber: i,
-      warningAt: parseTime(settings.intervalWarning),
+      warningAtTenths: toTenths(parseTime(settings.intervalWarning)),
       sound: settings.intervalTimeSound,
+      metronomeEnabled: settings.intervalMetronomeEnabled,
+      metronomeTime: settings.intervalMetronomeTime,
+      metronomeSound: settings.intervalMetronomeSound,
       warningSound: settings.intervalWarningSound,
     });
 
@@ -215,9 +265,9 @@ function buildPhases(settings) {
       phases.push({
         type: "rest",
         label: "Rest",
-        duration: restTime,
+        durationTenths: toTenths(restTime),
         intervalNumber: i,
-        warningAt: parseTime(settings.restWarning),
+        warningAtTenths: toTenths(parseTime(settings.restWarning)),
         sound: settings.restTimeSound,
         warningSound: settings.restWarningSound,
       });
@@ -319,9 +369,10 @@ function updateDisplay() {
     return;
   }
 
-  const warningActive = phase.warningAt !== null && phase.warningAt > 0 && state.phaseRemaining <= phase.warningAt;
+  const displaySeconds = Math.ceil(state.phaseRemainingTenths / 10);
+  const warningActive = phase.warningAtTenths !== null && phase.warningAtTenths > 0 && state.phaseRemainingTenths <= phase.warningAtTenths;
   elements.phaseLabel.textContent = warningActive ? `${phase.label} Ending` : phase.label;
-  elements.timerDisplay.textContent = formatTime(state.phaseRemaining);
+  elements.timerDisplay.textContent = formatTime(displaySeconds);
 
   const intervalNumber = phase.type === "interval" ? phase.intervalNumber : Math.min(phase.intervalNumber + (phase.type === "rest" ? 1 : 0), state.settings.intervalCount);
   elements.intervalLabel.textContent = `Interval ${intervalNumber} / ${state.settings.intervalCount}`;
@@ -344,7 +395,7 @@ function advancePhase() {
   }
 
   const nextPhase = state.phases[state.phaseIndex];
-  state.phaseRemaining = nextPhase.duration;
+  state.phaseRemainingTenths = nextPhase.durationTenths;
   playSound(nextPhase.sound ?? "transition");
   updateDisplay();
 }
@@ -360,22 +411,31 @@ function tick() {
     return;
   }
 
-  state.phaseRemaining -= 1;
+  state.phaseRemainingTenths -= 1;
 
   if (
-    phase.warningAt !== null &&
-    phase.warningAt > 0 &&
+    phase.type === "interval" &&
+    phase.metronomeEnabled &&
+    state.phaseRemainingTenths > 0 &&
+    state.phaseRemainingTenths % phase.metronomeTime === 0
+  ) {
+    playSound(phase.metronomeSound ?? "transition");
+  }
+
+  if (
+    phase.warningAtTenths !== null &&
+    phase.warningAtTenths > 0 &&
     !state.warned &&
-    state.phaseRemaining <= phase.warningAt
+    state.phaseRemainingTenths <= phase.warningAtTenths
   ) {
     state.warned = true;
     playSound(phase.warningSound ?? "warning");
-    showMessage(`${phase.label} ending in ${formatTime(phase.warningAt)}.`);
+    showMessage(`${phase.label} ending in ${formatTime(Math.ceil(phase.warningAtTenths / 10))}.`);
   }
 
   updateDisplay();
 
-  if (state.phaseRemaining <= 0) {
+  if (state.phaseRemainingTenths <= 0) {
     advancePhase();
   }
 }
@@ -388,6 +448,9 @@ function startTimer() {
       startDelaySound: next.startDelaySound,
       intervalTime: next.intervalTime,
       intervalTimeSound: next.intervalTimeSound,
+      intervalMetronomeEnabled: next.intervalMetronomeEnabled,
+      intervalMetronomeTime: next.intervalMetronomeTime,
+      intervalMetronomeSound: next.intervalMetronomeSound,
       intervalWarning: next.intervalWarning,
       intervalWarningSound: next.intervalWarningSound,
       restTime: next.restTime,
@@ -407,7 +470,7 @@ function startTimer() {
     state.phases = buildPhases(state.settings);
     state.phaseIndex = 0;
     state.warned = false;
-    state.phaseRemaining = state.phases[0]?.duration ?? 0;
+    state.phaseRemainingTenths = state.phases[0]?.durationTenths ?? 0;
     updateDisplay();
     playSound(state.phases[0]?.sound ?? "transition");
   }
@@ -417,7 +480,7 @@ function startTimer() {
   }
 
   state.isRunning = true;
-  state.timerId = window.setInterval(tick, 1000);
+  state.timerId = window.setInterval(tick, 100);
   requestWakeLock();
   showMessage("Timer running.");
 }
@@ -439,7 +502,7 @@ function stopTimer(resetMessage = true) {
   window.clearInterval(state.timerId);
   state.timerId = null;
   state.phaseIndex = 0;
-  state.phaseRemaining = 0;
+  state.phaseRemainingTenths = 0;
   state.phases = [];
   state.warned = false;
   releaseWakeLock();
@@ -457,6 +520,24 @@ elements.stopButton.addEventListener("click", () => stopTimer(true));
 
 elements.form.addEventListener("submit", (event) => {
   event.preventDefault();
+});
+
+elements.intervalMetronomeSlider.addEventListener("input", (event) => {
+  syncMetronomeTimeInputs(event.target.value);
+  applyLiveMetronomeSettings();
+});
+
+elements.intervalMetronomeTime.addEventListener("input", (event) => {
+  syncMetronomeTimeInputs(event.target.value);
+  applyLiveMetronomeSettings();
+});
+
+elements.intervalMetronomeEnabled.addEventListener("change", () => {
+  applyLiveMetronomeSettings();
+});
+
+elements.intervalMetronomeSound.addEventListener("change", () => {
+  applyLiveMetronomeSettings();
 });
 
 document.addEventListener("visibilitychange", () => {
